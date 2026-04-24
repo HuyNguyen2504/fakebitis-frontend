@@ -56,6 +56,15 @@ export default function AdminDashboard() {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(numericVal);
   };
 
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  const apiRoot = apiBase.replace('/api', '');
+
+  const formatImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${apiRoot}${url}`;
+  };
+
   // --- Image Upload Logic ---
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -66,16 +75,15 @@ export default function AdminDashboard() {
 
     setUploadingImage(true);
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-      const res = await fetch(`${apiBase.replace('/api', '')}/upload`, {
+      const res = await fetch(`${apiBase}/upload`, {
         method: 'POST',
         body: formData
       });
       const imagePath = await res.text();
-      const imageUrl = `${apiBase.replace('/api', '')}${imagePath}`;
+      const imageUrl = imagePath; // Store relative path in DB for flexibility
       
       if (editingProduct) {
-        setEditingProduct(prev => ({ ...prev, images: [...prev.images, imageUrl] }));
+        setEditingProduct(prev => ({ ...prev, images: [...(prev.images || []), imageUrl] }));
       }
     } catch (error) {
       alert('Error uploading image');
@@ -299,7 +307,7 @@ export default function AdminDashboard() {
                               const data = payload[0].payload;
                               return (
                                 <div className="bg-background border border-foreground/20 p-2 rounded shadow-lg flex flex-col items-center gap-2">
-                                  <img src={data.images[0]} alt={data.name} className="w-16 h-16 object-cover rounded bg-accent" />
+                                  <img src={formatImageUrl(data.images[0])} alt={data.name} className="w-16 h-16 object-cover rounded bg-accent" />
                                   <p className="text-xs font-bold text-center max-w-[150px]">{data.name}</p>
                                   <p className="text-sm font-bold text-primary">Sold: {data.sold}</p>
                                 </div>
@@ -331,7 +339,7 @@ export default function AdminDashboard() {
                       {stats?.shoesSoldData?.map(prod => (
                         <tr key={prod._id} className="border-b border-foreground/10 hover:bg-accent/30">
                           <td className="p-3 flex items-center gap-3">
-                            <img src={prod.images[0]} alt={prod.name} className="w-10 h-10 rounded object-cover bg-accent" />
+                            <img src={formatImageUrl(prod.images[0])} alt={prod.name} className="w-10 h-10 rounded object-cover bg-accent" />
                             <span className="font-semibold">{prod.name}</span>
                           </td>
                           <td className="p-3 font-semibold text-lg">{prod.sold}</td>
@@ -391,7 +399,7 @@ export default function AdminDashboard() {
                 {products.map(p => (
                   <tr key={p.id} className="border-b border-foreground/10 hover:bg-accent/30 transition-colors">
                     <td className="p-4 flex items-center gap-3">
-                      <img src={p.images[0]} alt={p.name} className="w-10 h-10 rounded object-cover bg-accent" />
+                      <img src={formatImageUrl(p.images[0])} alt={p.name} className="w-10 h-10 rounded object-cover bg-accent" />
                       <span className="font-semibold">{p.name}</span>
                     </td>
                     <td className="p-4">{p.category}</td>
@@ -611,7 +619,7 @@ export default function AdminDashboard() {
                 <div className="flex flex-wrap gap-4 mb-2">
                   {editingProduct.images.map((img, i) => (
                     <div key={i} className="relative">
-                      <img src={img} className="w-20 h-20 object-cover rounded border" />
+                      <img src={formatImageUrl(img)} className="w-20 h-20 object-cover rounded border" />
                       <button type="button" onClick={() => removeImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={12} /></button>
                     </div>
                   ))}
@@ -670,7 +678,7 @@ export default function AdminDashboard() {
                           setEditingCampaign({...editingCampaign, products: newProds});
                         }}
                       />
-                      <img src={p.images[0]} className="w-8 h-8 rounded object-cover" />
+                      <img src={formatImageUrl(p.images[0])} className="w-8 h-8 rounded object-cover" />
                       <span className="flex-1 truncate">{p.name}</span>
                     </label>
                   ))}
