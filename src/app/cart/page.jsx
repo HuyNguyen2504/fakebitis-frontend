@@ -36,6 +36,13 @@ export default function CartPage() {
     return selectedItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   }, [selectedItems]);
 
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace('/api', '');
+  const formatImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${apiBase}${url}`;
+  };
+
   const handleCheckoutClick = () => {
     if (selectedItems.length === 0) return;
     if (!session) {
@@ -48,6 +55,7 @@ export default function CartPage() {
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [bankCode, setBankCode] = useState(''); // Default: let VNPAY show all
 
   useEffect(() => {
     if (showConfirmModal && session) {
@@ -93,7 +101,7 @@ export default function CartPage() {
         body: JSON.stringify({
           amount: total,
           items: selectedItems,
-          bankCode: 'VNPAY',
+          bankCode: bankCode, // Dynamic bank code
           address: selectedAddr
         })
       });
@@ -151,7 +159,7 @@ export default function CartPage() {
                 <button onClick={() => toggleSelection(itemKey)} className="text-primary p-2">
                   {isSelected ? <CheckSquare size={24} /> : <Square size={24} className="text-foreground/30" />}
                 </button>
-                <img src={item.image} alt={item.name} className="w-24 h-24 object-cover rounded-lg bg-accent" />
+                <img src={formatImageUrl(item.image)} alt={item.name} className="w-24 h-24 object-cover rounded-lg bg-accent" />
                 <div className="flex-1">
                   <h3 className="font-bold text-lg leading-tight line-clamp-1">{item.name}</h3>
                   <div className="flex items-center gap-2 text-sm text-foreground/60 mb-2">
@@ -226,7 +234,7 @@ export default function CartPage() {
               {selectedItems.map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center text-sm">
                   <div className="flex-1 flex gap-3 items-center">
-                    <img src={item.image} alt={item.name} className="w-12 h-12 rounded object-cover" />
+                    <img src={formatImageUrl(item.image)} alt={item.name} className="w-12 h-12 rounded object-cover" />
                     <div>
                       <p className="font-semibold line-clamp-1">{item.name}</p>
                       <p className="text-foreground/60">Size: {item.size} x{item.quantity}</p>
@@ -268,7 +276,41 @@ export default function CartPage() {
                 )}
               </div>
 
-              <div className="flex justify-between items-center text-xl font-bold mt-2">
+              <div className="flex flex-col gap-2">
+                <h3 className="font-bold text-sm uppercase tracking-wider">Payment Method</h3>
+                <div className="grid grid-cols-1 gap-2">
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${bankCode === '' ? 'border-primary bg-primary/5' : 'border-foreground/10'}`}>
+                    <input type="radio" name="payment" value="" checked={bankCode === ''} onChange={(e) => setBankCode(e.target.value)} className="accent-primary" />
+                    <div className="flex-1">
+                      <p className="text-sm font-bold">VNPAY Default</p>
+                      <p className="text-xs text-foreground/60">Choose at VNPAY gateway</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${bankCode === 'VNPAYQR' ? 'border-primary bg-primary/5' : 'border-foreground/10'}`}>
+                    <input type="radio" name="payment" value="VNPAYQR" checked={bankCode === 'VNPAYQR'} onChange={(e) => setBankCode(e.target.value)} className="accent-primary" />
+                    <div className="flex-1">
+                      <p className="text-sm font-bold">VNPAY-QR</p>
+                      <p className="text-xs text-foreground/60">Scan with Mobile Banking Apps</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${bankCode === 'VNBANK' ? 'border-primary bg-primary/5' : 'border-foreground/10'}`}>
+                    <input type="radio" name="payment" value="VNBANK" checked={bankCode === 'VNBANK'} onChange={(e) => setBankCode(e.target.value)} className="accent-primary" />
+                    <div className="flex-1">
+                      <p className="text-sm font-bold">Local ATM Card</p>
+                      <p className="text-xs text-foreground/60">Domestic Bank Accounts</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${bankCode === 'INTCARD' ? 'border-primary bg-primary/5' : 'border-foreground/10'}`}>
+                    <input type="radio" name="payment" value="INTCARD" checked={bankCode === 'INTCARD'} onChange={(e) => setBankCode(e.target.value)} className="accent-primary" />
+                    <div className="flex-1">
+                      <p className="text-sm font-bold">International Cards</p>
+                      <p className="text-xs text-foreground/60">Visa, Mastercard, JCB</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center text-xl font-bold mt-2 pt-4 border-t border-foreground/10">
                 <span>Total Amount:</span>
                 <span className="text-primary">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(total)}</span>
               </div>

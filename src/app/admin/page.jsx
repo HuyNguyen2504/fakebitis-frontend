@@ -33,6 +33,7 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const authHeader = { 'Authorization': `Bearer ${session.user.email}` };
       const statsRes = await fetch(`${apiBase}/admin/stats`, { headers: authHeader, cache: 'no-store' });
       setStats(await statsRes.json());
       

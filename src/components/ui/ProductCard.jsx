@@ -3,8 +3,17 @@ import { ShoppingCart } from 'lucide-react';
 
 export default function ProductCard({ product }) {
   const { id, name, price, discount_price, images, tags } = product;
-  const primaryImage = images[0];
-  const secondaryImage = images[1] || primaryImage;
+  
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace('/api', '');
+  
+  const formatImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${apiBase}${url}`;
+  };
+
+  const primaryImage = formatImageUrl(images[0]);
+  const secondaryImage = formatImageUrl(images[1] || images[0]);
   const currentPrice = discount_price || price;
   const hasDiscount = !!discount_price;
 

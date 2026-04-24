@@ -1,13 +1,25 @@
 'use client';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
-import { Package, ExternalLink } from 'lucide-react';
+import { Package, ExternalLink, CheckCircle2, XCircle } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function HistoryPage() {
   const { data: session, status } = useSession();
+  const searchParams = useSearchParams();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const paymentStatus = searchParams.get('status');
+  const errorCode = searchParams.get('code');
+
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace('/api', '');
+  const formatImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${apiBase}${url}`;
+  };
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -46,6 +58,33 @@ export default function HistoryPage() {
   return (
     <div className="max-w-[1000px] mx-auto px-4 md:px-8 py-12">
       <h1 className="text-3xl font-black uppercase mb-8">Order History</h1>
+
+      {/* Payment Status Banners */}
+      {paymentStatus === 'success' && (
+        <div className="mb-8 bg-green-50 border border-green-200 rounded-2xl p-6 flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="bg-green-500 text-white p-2 rounded-full">
+            <CheckCircle2 size={24} />
+          </div>
+          <div>
+            <h3 className="font-bold text-green-800 text-lg">Payment Successful!</h3>
+            <p className="text-green-700 text-sm">Your order has been confirmed and is being processed.</p>
+          </div>
+        </div>
+      )}
+
+      {paymentStatus === 'failed' && (
+        <div className="mb-8 bg-red-50 border border-red-200 rounded-2xl p-6 flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="bg-red-500 text-white p-2 rounded-full">
+            <XCircle size={24} />
+          </div>
+          <div>
+            <h3 className="font-bold text-red-800 text-lg">Payment Failed</h3>
+            <p className="text-red-700 text-sm">
+              {errorCode === '24' ? 'Transaction cancelled by user.' : 'There was an error processing your payment.'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center bg-accent rounded-xl p-12 text-center">
@@ -86,7 +125,7 @@ export default function HistoryPage() {
               <div className="p-4 flex flex-col gap-4">
                 {order.items.map((item, idx) => (
                   <div key={idx} className="flex gap-4 items-center">
-                    <img src={item.image} alt={item.name} className="w-16 h-16 rounded object-cover bg-accent" />
+                    <img src={formatImageUrl(item.image)} alt={item.name} className="w-16 h-16 rounded object-cover bg-accent" />
                     <div className="flex-1">
                       <Link href={`/products/${item.product}`} className="font-semibold hover:text-primary transition-colors flex items-center gap-1 w-fit">
                         {item.name} <ExternalLink size={14} className="text-foreground/40" />

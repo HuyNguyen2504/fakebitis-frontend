@@ -43,6 +43,16 @@ export default async function ProductDetailPage({ params }) {
   const currentPrice = discount_price || price;
   const hasDiscount = !!discount_price;
 
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace('/api', '');
+  
+  const formatImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${apiBase}${url}`;
+  };
+
+  const mainImage = formatImageUrl(images[0]);
+
   return (
     <article className="max-w-[1440px] mx-auto px-4 md:px-8 py-8 md:py-12 w-full">
       {/* Breadcrumb */}
@@ -68,7 +78,7 @@ export default async function ProductDetailPage({ params }) {
               ))}
             </div>
             <img 
-              src={images[0]} 
+              src={mainImage} 
               alt={`${name} main view`} 
               className="absolute inset-0 w-full h-full object-cover"
             />
@@ -76,7 +86,7 @@ export default async function ProductDetailPage({ params }) {
           <div className="grid grid-cols-2 gap-4">
             {images.slice(1).map((img, idx) => (
               <div key={idx} className="aspect-square bg-accent rounded-xl overflow-hidden">
-                <img src={img} alt={`${name} view ${idx+2}`} className="w-full h-full object-cover" />
+                <img src={formatImageUrl(img)} alt={`${name} view ${idx+2}`} className="w-full h-full object-cover" />
               </div>
             ))}
           </div>

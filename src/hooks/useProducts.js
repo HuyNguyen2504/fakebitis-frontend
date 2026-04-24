@@ -17,6 +17,24 @@ export default function useProducts() {
   const [sort, setSort] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  
+  // Sync with URL params
+  useEffect(() => {
+    const category = searchParams.get('category');
+    const search = searchParams.get('search');
+    
+    setFilters(prev => {
+      const next = { ...prev };
+      if (category) next.category = [category];
+      else delete next.category;
+      
+      if (search) next.search = search;
+      else delete next.search;
+      
+      return next;
+    });
+    setPage(1);
+  }, [searchParams]);
 
   const updateFilter = (key, value) => {
     setFilters(prev => {
@@ -34,14 +52,11 @@ export default function useProducts() {
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
-      try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
         const queryParams = new URLSearchParams();
-        
         queryParams.append('page', page);
         queryParams.append('limit', 12);
-        
         if (sort) queryParams.append('sort', sort);
-        
         Object.entries(filters).forEach(([key, value]) => {
           if (Array.isArray(value)) {
             queryParams.append(key, value.join(','));
@@ -49,15 +64,15 @@ export default function useProducts() {
             queryParams.append(key, value);
           }
         });
-
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-        const res = await fetch(`${apiBase}/products?${queryParams.toString()}`);
+        try {
+          console.log('Fetching products from:', `${apiBase}/products?${queryParams.toString()}`);
+          const res = await fetch(`${apiBase}/products?${queryParams.toString()}`);
         const data = await res.json();
         
         setProducts(data.data);
         setTotalPages(data.totalPages);
       } catch (error) {
-        console.error('Failed to fetch products:', error);
+        console.error('Failed to fetch products. API URL:', apiBase, 'Error:', error);
         setProducts([]);
       } finally {
         // Add a slight delay just to show the skeleton animation clearly (simulating network latency)
