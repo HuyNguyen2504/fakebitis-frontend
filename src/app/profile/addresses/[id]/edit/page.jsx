@@ -38,7 +38,8 @@ export default function EditAddressPage({ params }) {
 
   const fetchAddress = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/user/addresses', {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${apiBase}/user/addresses`, {
         headers: { 'Authorization': `Bearer ${session.user.email}` },
         cache: 'no-store'
       });
@@ -62,7 +63,8 @@ export default function EditAddressPage({ params }) {
     setSaving(true);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/user/addresses/${id}`, {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${apiBase}/user/addresses/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -87,7 +89,8 @@ export default function EditAddressPage({ params }) {
     if (!confirm('Are you sure you want to delete this address?')) return;
     setSaving(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/user/addresses/${id}`, {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${apiBase}/user/addresses/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${session.user.email}` }
       });

@@ -32,16 +32,15 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     try {
-      const authHeader = { 'Authorization': `Bearer ${session.user.email}` };
-      
-      const statsRes = await fetch('http://localhost:5000/api/admin/stats', { headers: authHeader, cache: 'no-store' });
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const statsRes = await fetch(`${apiBase}/admin/stats`, { headers: authHeader, cache: 'no-store' });
       setStats(await statsRes.json());
       
-      const prodRes = await fetch('http://localhost:5000/api/products', { cache: 'no-store' });
+      const prodRes = await fetch(`${apiBase}/products`, { cache: 'no-store' });
       const prodData = await prodRes.json();
       setProducts(prodData.data);
       
-      const campRes = await fetch('http://localhost:5000/api/admin/campaigns', { headers: authHeader, cache: 'no-store' });
+      const campRes = await fetch(`${apiBase}/admin/campaigns`, { headers: authHeader, cache: 'no-store' });
       setCampaigns(await campRes.json());
       
       setLoading(false);
@@ -66,12 +65,13 @@ export default function AdminDashboard() {
 
     setUploadingImage(true);
     try {
-      const res = await fetch('http://localhost:5000/api/upload', {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${apiBase.replace('/api', '')}/upload`, {
         method: 'POST',
         body: formData
       });
       const imagePath = await res.text();
-      const imageUrl = `http://localhost:5000${imagePath}`;
+      const imageUrl = `${apiBase.replace('/api', '')}${imagePath}`;
       
       if (editingProduct) {
         setEditingProduct(prev => ({ ...prev, images: [...prev.images, imageUrl] }));
@@ -96,7 +96,8 @@ export default function AdminDashboard() {
   // --- Save Product Logic ---
   const handleSaveProduct = async (e) => {
     e.preventDefault();
-    const url = editingProduct._id ? `http://localhost:5000/api/admin/products/${editingProduct._id}` : 'http://localhost:5000/api/admin/products';
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const url = editingProduct._id ? `${apiBase}/admin/products/${editingProduct._id}` : `${apiBase}/admin/products`;
     const method = editingProduct._id ? 'PUT' : 'POST';
     
     // Ensure numbers
@@ -124,7 +125,8 @@ export default function AdminDashboard() {
   // --- Save Campaign Logic ---
   const handleSaveCampaign = async (e) => {
     e.preventDefault();
-    const url = editingCampaign._id ? `http://localhost:5000/api/admin/campaigns/${editingCampaign._id}` : 'http://localhost:5000/api/admin/campaigns';
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const url = editingCampaign._id ? `${apiBase}/admin/campaigns/${editingCampaign._id}` : `${apiBase}/admin/campaigns`;
     const method = editingCampaign._id ? 'PUT' : 'POST';
 
     try {
@@ -402,7 +404,8 @@ export default function AdminDashboard() {
                       <button 
                         onClick={async () => {
                           if (confirm('Delete this product?')) {
-                            await fetch(`http://localhost:5000/api/admin/products/${p.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${session.user.email}` } });
+                            const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+                            await fetch(`${apiBase}/admin/products/${p.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${session.user.email}` } });
                             fetchData();
                           }
                         }}
@@ -453,7 +456,8 @@ export default function AdminDashboard() {
                   <button 
                     onClick={async () => {
                       if (confirm('Delete campaign?')) {
-                        await fetch(`http://localhost:5000/api/admin/campaigns/${c._id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${session.user.email}` } });
+                        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+                        await fetch(`${apiBase}/admin/campaigns/${c._id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${session.user.email}` } });
                         fetchData();
                       }
                     }}

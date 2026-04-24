@@ -25,7 +25,8 @@ export default function AddressesPage() {
 
   const fetchAddresses = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/user/addresses', {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${apiBase}/user/addresses`, {
         headers: { 'Authorization': `Bearer ${session.user.email}` },
         cache: 'no-store'
       });

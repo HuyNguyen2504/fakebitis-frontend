@@ -17,7 +17,8 @@ export default function Navbar() {
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/products/categories')
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    fetch(`${apiBase}/products/categories`)
       .then(res => res.json())
       .then(data => setCategories(data))
       .catch(err => console.error('Failed to fetch categories', err));

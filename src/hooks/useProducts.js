@@ -50,7 +50,8 @@ export default function useProducts() {
           }
         });
 
-        const res = await fetch(`http://localhost:5000/api/products?${queryParams.toString()}`);
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+        const res = await fetch(`${apiBase}/products?${queryParams.toString()}`);
         const data = await res.json();
         
         setProducts(data.data);

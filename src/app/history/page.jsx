@@ -11,7 +11,8 @@ export default function HistoryPage() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      fetch('http://localhost:5000/api/orders/history', {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      fetch(`${apiBase}/orders/history`, {
         headers: {
           'Authorization': `Bearer ${session.user.email}` // Simple demo auth
         }
