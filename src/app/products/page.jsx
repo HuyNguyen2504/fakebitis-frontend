@@ -3,9 +3,9 @@ import useProducts from '@/hooks/useProducts';
 import FilterSidebar from '@/components/plp/FilterSidebar';
 import ProductGrid from '@/components/plp/ProductGrid';
 import { SlidersHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 
-export default function ProductsPage() {
+function ProductsContent() {
   const {
     products,
     isLoading,
@@ -90,5 +90,13 @@ export default function ProductsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-foreground/60">Loading products...</div>}>
+      <ProductsContent />
+    </Suspense>
   );
 }
