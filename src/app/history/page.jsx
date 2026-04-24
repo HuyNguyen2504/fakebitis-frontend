@@ -1,11 +1,11 @@
 'use client';
 import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { Package, ExternalLink, CheckCircle2, XCircle } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function HistoryPage() {
+function HistoryContent() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const [orders, setOrders] = useState([]);
@@ -23,10 +23,10 @@ export default function HistoryPage() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-      fetch(`${apiBase}/orders/history`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      fetch(`${apiUrl}/orders/history`, {
         headers: {
-          'Authorization': `Bearer ${session.user.email}` // Simple demo auth
+          'Authorization': `Bearer ${session.user.email}`
         }
       })
       .then(res => res.json())
@@ -59,7 +59,6 @@ export default function HistoryPage() {
     <div className="max-w-[1000px] mx-auto px-4 md:px-8 py-12">
       <h1 className="text-3xl font-black uppercase mb-8">Order History</h1>
 
-      {/* Payment Status Banners */}
       {paymentStatus === 'success' && (
         <div className="mb-8 bg-green-50 border border-green-200 rounded-2xl p-6 flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="bg-green-500 text-white p-2 rounded-full">
@@ -143,5 +142,13 @@ export default function HistoryPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center">Loading...</div>}>
+      <HistoryContent />
+    </Suspense>
   );
 }
