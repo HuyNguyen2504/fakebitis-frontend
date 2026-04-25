@@ -99,7 +99,7 @@ export default function CartPage() {
           'Authorization': `Bearer ${session.user.email}` 
         },
         body: JSON.stringify({
-          amount: total,
+          amount: total, // Send full amount
           items: selectedItems,
           bankCode: bankCode, // Dynamic bank code
           address: selectedAddr
@@ -116,11 +116,8 @@ export default function CartPage() {
 
       const data = await res.json();
       if (data.url) {
-        // Clear selected items from cart locally before redirecting
-        const remainingItems = cartItems.filter(item => !selectedItemKeys.has(`${item.product}-${item.size}-${item.color}`));
-        if (typeof setCartItems === 'function') {
-          setCartItems(remainingItems);
-        }
+        // We no longer clear the cart here. 
+        // It will be cleared in HistoryPage upon success.
         window.location.href = data.url;
       } else {
         alert('Payment initiation failed.');

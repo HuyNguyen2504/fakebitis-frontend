@@ -1,47 +1,93 @@
 'use client';
 import { useSession } from 'next-auth/react';
-import { useEffect, useState, Suspense } from 'react';
-import { Package, ExternalLink, CheckCircle2, XCircle } from 'lucide-react';
+import { useEffect, useState, Suspense, useContext } from 'react';
+import { Package, ExternalLink, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+import { CartContext } from '@/components/Providers';
 import Link from 'next/link';
 
 function HistoryContent() {
   const { data: session, status } = useSession();
+  const { cartItems, setCartItems } = useContext(CartContext);
   const searchParams = useSearchParams();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const paymentStatus = searchParams.get('status');
   const errorCode = searchParams.get('code');
+  const orderId = searchParams.get('orderId');
 
   const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace('/api', '');
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
   const formatImageUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
     return `${apiBase}${url}`;
   };
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-      fetch(`${apiUrl}/orders/history`, {
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/orders/history`, {
         headers: {
           'Authorization': `Bearer ${session.user.email}`
         }
-      })
-      .then(res => res.json())
-      .then(data => {
-        setOrders(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
       });
+      const data = await res.json();
+      setOrders(data);
+      
+      // If payment was successful, clear those items from cart
+      if (paymentStatus === 'success' && orderId) {
+        const successfulOrder = data.find(o => o._id === orderId);
+        if (successfulOrder) {
+          const paidItems = successfulOrder.items;
+          const remainingCart = cartItems.filter(cartItem => {
+            return !paidItems.some(paidItem => 
+              paidItem.product === cartItem.product && 
+              paidItem.size === cartItem.size && 
+              paidItem.color === cartItem.color
+            );
+          });
+          setCartItems(remainingCart);
+          // Remove query params to avoid re-clearing
+          window.history.replaceState({}, '', '/history');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchHistory();
     } else if (status === 'unauthenticated') {
       setLoading(false);
     }
   }, [status, session]);
+
+  const handleDeleteOrder = async (id) => {
+    if (!confirm('Are you sure you want to delete this order from history?')) return;
+    
+    try {
+      const res = await fetch(`${apiUrl}/payment/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.user.email}`
+        }
+      });
+      if (res.ok) {
+        setOrders(prev => prev.filter(o => o._id !== id));
+      } else {
+        alert('Failed to delete order');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error deleting order');
+    }
+  };
 
   if (status === 'loading' || loading) {
     return <div className="min-h-[60vh] flex items-center justify-center">Loading your history...</div>;
@@ -66,7 +112,7 @@ function HistoryContent() {
           </div>
           <div>
             <h3 className="font-bold text-green-800 text-lg">Payment Successful!</h3>
-            <p className="text-green-700 text-sm">Your order has been confirmed and is being processed.</p>
+            <p className="text-green-700 text-sm">Your order has been confirmed and the items have been removed from your cart.</p>
           </div>
         </div>
       )}
@@ -116,9 +162,18 @@ function HistoryContent() {
                     {order.status}
                   </span>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-foreground/60 font-medium uppercase tracking-wider mb-1">Order ID</p>
-                  <p className="font-mono text-sm">{order._id.slice(-8)}</p>
+                <div className="flex items-center gap-6">
+                  <div className="text-right hidden md:block">
+                    <p className="text-xs text-foreground/60 font-medium uppercase tracking-wider mb-1">Order ID</p>
+                    <p className="font-mono text-sm">{order._id.slice(-8)}</p>
+                  </div>
+                  <button 
+                    onClick={() => handleDeleteOrder(order._id)}
+                    className="p-2 text-foreground/30 hover:text-red-500 transition-colors"
+                    title="Delete History"
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
               </div>
               <div className="p-4 flex flex-col gap-4">
