@@ -14,6 +14,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, products, sales
   const [activeDashboardView, setActiveDashboardView] = useState('revenue'); // revenue, orders, shoes_sold
+  const [activeShoesSoldTab, setActiveShoesSoldTab] = useState('product'); // product, category
   
   // Modals state
   const [showProductModal, setShowProductModal] = useState(false);
@@ -21,6 +22,11 @@ export default function AdminDashboard() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [campaignFilterCategory, setCampaignFilterCategory] = useState('All');
+  const [productFilterCategory, setProductFilterCategory] = useState('All');
+  const [activeProductSubTab, setActiveProductSubTab] = useState('list'); // list, categories
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.role === 'admin') {
@@ -32,7 +38,7 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
       const authHeader = { 'Authorization': `Bearer ${session.user.email}` };
       const statsRes = await fetch(`${apiBase}/admin/stats`, { headers: authHeader, cache: 'no-store' });
       setStats(await statsRes.json());
@@ -56,7 +62,7 @@ export default function AdminDashboard() {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(numericVal);
   };
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
   const apiRoot = apiBase.replace('/api', '');
 
   const formatImageUrl = (url) => {
@@ -105,7 +111,7 @@ export default function AdminDashboard() {
   // --- Save Product Logic ---
   const handleSaveProduct = async (e) => {
     e.preventDefault();
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
     const url = editingProduct._id ? `${apiBase}/admin/products/${editingProduct._id}` : `${apiBase}/admin/products`;
     const method = editingProduct._id ? 'PUT' : 'POST';
     
@@ -134,7 +140,7 @@ export default function AdminDashboard() {
   // --- Save Campaign Logic ---
   const handleSaveCampaign = async (e) => {
     e.preventDefault();
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
     const url = editingCampaign._id ? `${apiBase}/admin/campaigns/${editingCampaign._id}` : `${apiBase}/admin/campaigns`;
     const method = editingCampaign._id ? 'PUT' : 'POST';
 
@@ -152,6 +158,42 @@ export default function AdminDashboard() {
     } catch (err) {
       alert('Error saving campaign');
     }
+  };
+
+  // --- Category Logic ---
+  const handleSaveCategory = async (e) => {
+    e.preventDefault();
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+    if (editingCategory._id) {
+      if (!confirm('Sẽ thay đổi toàn bộ sản phẩm có danh mục này, bạn vẫn muốn sửa?')) return;
+    }
+    const url = editingCategory._id ? `${apiBase}/admin/categories/${editingCategory._id}` : `${apiBase}/admin/categories`;
+    const method = editingCategory._id ? 'PUT' : 'POST';
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.user.email}` },
+        body: JSON.stringify(editingCategory)
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      setShowCategoryModal(false);
+      fetchData();
+      window.dispatchEvent(new Event('categoriesUpdated'));
+    } catch (err) { alert('Error saving category'); }
+  };
+
+  const handleDeleteCategory = async (id) => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+    try {
+      const res = await fetch(`${apiBase}/admin/categories/${id}`, { 
+        method: 'DELETE', 
+        headers: { 'Authorization': `Bearer ${session.user.email}` } 
+      });
+      const data = await res.json();
+      if (!res.ok) return alert(data.message);
+      fetchData();
+      window.dispatchEvent(new Event('categoriesUpdated'));
+    } catch (err) { alert('Error deleting category'); }
   };
 
   if (status === 'loading' || loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -284,71 +326,146 @@ export default function AdminDashboard() {
           )}
 
           {activeDashboardView === 'shoes_sold' && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 flex flex-col gap-8">
-              <div className="bg-background border border-foreground/10 rounded-2xl p-6 shadow-sm">
-                <h3 className="text-lg font-bold mb-6">Shoes Sold by Product</h3>
-                <div className="h-[400px] w-full">
-                  {stats?.shoesSoldData && stats.shoesSoldData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={stats.shoesSoldData} margin={{ top: 5, right: 20, bottom: 60, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" />
-                        <XAxis 
-                          dataKey="name" 
-                          tickLine={false} 
-                          axisLine={false} 
-                          tick={{fontSize: 10}} 
-                          angle={-45} 
-                          textAnchor="end"
-                        />
-                        <YAxis tickLine={false} axisLine={false} tick={{fontSize: 12}} allowDecimals={false} />
-                        <Tooltip 
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0].payload;
-                              return (
-                                <div className="bg-background border border-foreground/20 p-2 rounded shadow-lg flex flex-col items-center gap-2">
-                                  <img src={formatImageUrl(data.images[0])} alt={data.name} className="w-16 h-16 object-cover rounded bg-accent" />
-                                  <p className="text-xs font-bold text-center max-w-[150px]">{data.name}</p>
-                                  <p className="text-sm font-bold text-primary">Sold: {data.sold}</p>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Line type="monotone" dataKey="sold" stroke="#10b981" strokeWidth={3} dot={{r: 4, fill: '#10b981', strokeWidth: 0}} activeDot={{r: 6}} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-foreground/40">No data available</div>
-                  )}
+            <div className="animate-in fade-in slide-in-from-bottom-4 flex flex-col gap-8">               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <h3 className="text-lg font-bold">Shoes Sold Analysis</h3>
+                <div className="flex bg-accent rounded-lg p-1">
+                  <button 
+                    onClick={() => setActiveShoesSoldTab('product')}
+                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeShoesSoldTab === 'product' ? 'bg-background text-primary shadow-sm' : 'text-foreground/50 hover:text-foreground'}`}
+                  >
+                    By Product
+                  </button>
+                  <button 
+                    onClick={() => setActiveShoesSoldTab('category')}
+                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeShoesSoldTab === 'category' ? 'bg-background text-primary shadow-sm' : 'text-foreground/50 hover:text-foreground'}`}
+                  >
+                    By Category
+                  </button>
                 </div>
               </div>
 
-              <div className="bg-background border border-foreground/10 rounded-2xl p-6 shadow-sm">
-                <h3 className="text-lg font-bold mb-6">Product Sales Table</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-accent text-foreground/70 uppercase">
-                      <tr>
-                        <th className="p-3">Product</th>
-                        <th className="p-3">Total Sold</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stats?.shoesSoldData?.map(prod => (
-                        <tr key={prod._id} className="border-b border-foreground/10 hover:bg-accent/30">
-                          <td className="p-3 flex items-center gap-3">
-                            <img src={formatImageUrl(prod.images[0])} alt={prod.name} className="w-10 h-10 rounded object-cover bg-accent" />
-                            <span className="font-semibold">{prod.name}</span>
-                          </td>
-                          <td className="p-3 font-semibold text-lg">{prod.sold}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              {activeShoesSoldTab === 'product' ? (
+                <>
+                  <div className="bg-background border border-foreground/10 rounded-2xl p-6 shadow-sm mb-8">
+                    <h3 className="text-sm font-bold text-foreground/60 uppercase tracking-widest mb-6">Sold Count by Product</h3>
+                    <div className="h-[400px] w-full">
+                      {stats?.shoesSoldData && stats.shoesSoldData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={stats.shoesSoldData} margin={{ top: 5, right: 20, bottom: 60, left: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" />
+                            <XAxis 
+                              dataKey="name" 
+                              tickLine={false} 
+                              axisLine={false} 
+                              tick={{fontSize: 10}} 
+                              angle={-45} 
+                              textAnchor="end"
+                            />
+                            <YAxis tickLine={false} axisLine={false} tick={{fontSize: 12}} allowDecimals={false} />
+                            <Tooltip 
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0].payload;
+                                  return (
+                                    <div className="bg-background border border-foreground/20 p-2 rounded shadow-lg flex flex-col items-center gap-2">
+                                      <img src={formatImageUrl(data.images[0])} alt={data.name} className="w-16 h-16 object-cover rounded bg-accent" />
+                                      <p className="text-xs font-bold text-center max-w-[150px]">{data.name}</p>
+                                      <p className="text-sm font-bold text-primary">Sold: {data.sold}</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <Line type="monotone" dataKey="sold" stroke="#10b981" strokeWidth={3} dot={{r: 4, fill: '#10b981', strokeWidth: 0}} activeDot={{r: 6}} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-foreground/40">No data available</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-background border border-foreground/10 rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-sm font-bold text-foreground/60 uppercase tracking-widest mb-6">Product Performance Ranking</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-accent text-foreground/70 uppercase">
+                          <tr>
+                            <th className="p-3">Rank</th>
+                            <th className="p-3">Product</th>
+                            <th className="p-3 text-right">Total Sold</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stats?.shoesSoldData?.map((prod, idx) => (
+                            <tr key={prod._id} className="border-b border-foreground/10 hover:bg-accent/30">
+                              <td className="p-3 font-bold text-foreground/30">#{idx + 1}</td>
+                              <td className="p-3 flex items-center gap-3">
+                                <img src={formatImageUrl(prod.images[0])} alt={prod.name} className="w-10 h-10 rounded object-cover bg-accent" />
+                                <span className="font-semibold">{prod.name}</span>
+                              </td>
+                              <td className="p-3 font-bold text-right text-lg">{prod.sold}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-background border border-foreground/10 rounded-2xl p-6 shadow-sm mb-8">
+                    <h3 className="text-sm font-bold text-foreground/60 uppercase tracking-widest mb-6">Sold Count by Category</h3>
+                    <div className="h-[400px] w-full">
+                      {stats?.shoesSoldByCategory && stats.shoesSoldByCategory.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={stats.shoesSoldByCategory} margin={{ top: 5, right: 20, bottom: 40, left: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" />
+                            <XAxis 
+                              dataKey="name" 
+                              tickLine={false} 
+                              axisLine={false} 
+                              tick={{fontSize: 12, fontWeight: 'bold'}}
+                            />
+                            <YAxis tickLine={false} axisLine={false} tick={{fontSize: 12}} allowDecimals={false} />
+                            <Tooltip />
+                            <Line type="monotone" dataKey="soldCount" stroke="#8b5cf6" strokeWidth={3} dot={{r: 5, fill: '#8b5cf6', strokeWidth: 0}} activeDot={{r: 7}} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-foreground/40">No data available</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-background border border-foreground/10 rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-sm font-bold text-foreground/60 uppercase tracking-widest mb-6">Category Popularity Ranking</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-accent text-foreground/70 uppercase">
+                          <tr>
+                            <th className="p-3">Rank</th>
+                            <th className="p-3">Category</th>
+                            <th className="p-3 text-right">Total Units Sold</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stats?.shoesSoldByCategory?.map((cat, idx) => (
+                            <tr key={cat.name} className="border-b border-foreground/10 hover:bg-accent/30">
+                              <td className="p-3 font-bold text-foreground/30">#{idx + 1}</td>
+                              <td className="p-3">
+                                <span className="bg-accent px-3 py-1 rounded-full font-bold text-xs uppercase tracking-wider">{cat.name}</span>
+                              </td>
+                              <td className="p-3 font-bold text-right text-lg text-primary">{cat.soldCount}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </>
@@ -356,10 +473,37 @@ export default function AdminDashboard() {
 
       {/* Products Tab */}
       {activeTab === 'products' && (
-        <div className="bg-background border border-foreground/10 rounded-2xl p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h3 className="text-lg font-bold">Manage Products</h3>
-            <div className="flex gap-4 w-full sm:w-auto">
+        <div className="flex flex-col gap-6">
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setActiveProductSubTab('list')}
+              className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${activeProductSubTab === 'list' ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-accent text-foreground/50 hover:bg-accent/80'}`}
+            >
+              Main Products
+            </button>
+            <button 
+              onClick={() => setActiveProductSubTab('categories')}
+              className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${activeProductSubTab === 'categories' ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-accent text-foreground/50 hover:bg-accent/80'}`}
+            >
+              Category Management
+            </button>
+          </div>
+
+          {activeProductSubTab === 'list' ? (
+            <div className="bg-background border border-foreground/10 rounded-2xl p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h3 className="text-lg font-bold">Manage Products</h3>
+            <div className="flex flex-wrap gap-4 w-full sm:w-auto">
+              <select 
+                value={productFilterCategory} 
+                onChange={e => setProductFilterCategory(e.target.value)}
+                className="border border-foreground/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-primary bg-background"
+              >
+                <option value="All">All Categories</option>
+                {stats?.categories?.map(cat => (
+                  <option key={cat._id} value={cat.name}>{cat.name}</option>
+                ))}
+              </select>
               <input 
                 type="text" 
                 placeholder="Search products..." 
@@ -388,32 +532,38 @@ export default function AdminDashboard() {
             <table className="w-full text-left text-sm">
               <thead className="bg-accent/50 border-y border-foreground/10 text-foreground/70 uppercase">
                 <tr>
-                  <th className="p-4 font-semibold">Product</th>
-                  <th className="p-4 font-semibold">Category</th>
+                   <th className="p-4 font-semibold">Product</th>
+                  <th className="p-4 font-semibold">Categories</th>
                   <th className="p-4 font-semibold">Price</th>
                   <th className="p-4 font-semibold">Sold</th>
                   <th className="p-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {products.map(p => (
-                  <tr key={p.id} className="border-b border-foreground/10 hover:bg-accent/30 transition-colors">
+                {products
+                  .filter(p => productFilterCategory === 'All' || p.categories?.some(c => c.name === productFilterCategory))
+                  .map(p => (
+                  <tr key={p.id} className="border-b border-foreground/10 hover:bg-accent/30 transition-colors">                     
                     <td className="p-4 flex items-center gap-3">
                       <img src={formatImageUrl(p.images[0])} alt={p.name} className="w-10 h-10 rounded object-cover bg-accent" />
                       <span className="font-semibold">{p.name}</span>
                     </td>
-                    <td className="p-4">{p.category}</td>
+                    <td className="p-4 flex flex-wrap gap-1">
+                      {p.categories?.map(c => (
+                        <span key={c._id} className="text-[10px] bg-accent px-2 py-0.5 rounded-full font-bold uppercase">{c.name}</span>
+                      ))}
+                    </td>
                     <td className="p-4 font-semibold text-primary">{formatCurrency(p.price)}</td>
                     <td className="p-4">{p.sold}</td>
                     <td className="p-4 flex justify-end gap-2">
                       <button 
-                        onClick={() => { setEditingProduct({...p, _id: p.id}); setShowProductModal(true); }}
+                        onClick={() => { setEditingProduct({...p, _id: p.id, categories: p.categories?.map(c => c._id)}); setShowProductModal(true); }}
                         className="p-2 text-foreground/60 hover:text-primary bg-background border border-foreground/10 rounded"
                       ><Edit size={16} /></button>
                       <button 
                         onClick={async () => {
                           if (confirm('Delete this product?')) {
-                            const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+                            const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
                             await fetch(`${apiBase}/admin/products/${p.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${session.user.email}` } });
                             fetchData();
                           }
@@ -422,10 +572,45 @@ export default function AdminDashboard() {
                       ><Trash size={16} /></button>
                     </td>
                   </tr>
-                ))}
+                 ))}
               </tbody>
             </table>
           </div>
+        </div>
+          ) : (
+            <div className="bg-background border border-foreground/10 rounded-2xl p-6 shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-bold">Category Management</h3>
+                <button 
+                  onClick={() => { setEditingCategory({ name: '' }); setShowCategoryModal(true); }}
+                  className="text-sm font-bold bg-foreground text-background px-4 py-2 rounded-lg hover:bg-foreground/80 flex items-center gap-2"
+                >
+                  <Plus size={16} /> Add New Category
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-accent/50 border-y border-foreground/10 text-foreground/70 uppercase">
+                    <tr>
+                      <th className="p-4 font-semibold">Category Name</th>
+                      <th className="p-4 font-semibold text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats?.categories?.map(cat => (
+                      <tr key={cat._id} className="border-b border-foreground/10 hover:bg-accent/30 transition-colors">
+                        <td className="p-4 font-bold uppercase tracking-wider">{cat.name}</td>
+                        <td className="p-4 flex justify-end gap-2">
+                          <button onClick={() => { setEditingCategory(cat); setShowCategoryModal(true); }} className="p-2 text-foreground/60 hover:text-primary bg-background border border-foreground/10 rounded"><Edit size={16} /></button>
+                          <button onClick={() => handleDeleteCategory(cat._id)} className="p-2 text-foreground/60 hover:text-red-500 bg-background border border-foreground/10 rounded"><Trash size={16} /></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -465,7 +650,7 @@ export default function AdminDashboard() {
                   <button 
                     onClick={async () => {
                       if (confirm('Delete campaign?')) {
-                        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+                        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
                         await fetch(`${apiBase}/admin/campaigns/${c._id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${session.user.email}` } });
                         fetchData();
                       }
@@ -494,25 +679,40 @@ export default function AdminDashboard() {
               <button onClick={() => setShowProductModal(false)}><X size={24} /></button>
             </div>
             <form onSubmit={handleSaveProduct} className="p-6 flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold uppercase mb-1 block">Name</label>
-                  <input required value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full border p-2 rounded" />
+              <div className="flex flex-col gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold uppercase mb-1 block text-foreground/60">Product Name</label>
+                    <input required value={editingProduct.name || ''} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full border border-foreground/10 p-3 rounded-xl bg-accent/20 focus:outline-none focus:border-primary transition-all" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase mb-1 block text-foreground/60">Price (VND)</label>
+                    <input type="number" required value={editingProduct.price || ''} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full border border-foreground/10 p-3 rounded-xl bg-accent/20 focus:outline-none focus:border-primary transition-all" />
+                  </div>
                 </div>
+
                 <div>
-                  <label className="text-xs font-bold uppercase mb-1 block">Category</label>
-                  <select required value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full border p-2 rounded bg-background">
-                    <option value="" disabled>Select Category</option>
-                    <option value="Sneaker">Sneaker</option>
-                    <option value="Running">Running</option>
-                    <option value="Sandal">Sandal</option>
-                    <option value="Apparel">Apparel</option>
-                    <option value="Accessories">Accessories</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold uppercase mb-1 block">Price (VND)</label>
-                  <input type="number" required value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full border p-2 rounded" />
+                  <label className="text-xs font-bold uppercase mb-2 block text-foreground/60">Categories (Select Multiple)</label>
+                  <div className="flex flex-wrap gap-2 p-4 border border-foreground/10 rounded-xl bg-accent/5">
+                    {stats?.categories?.map(cat => (
+                      <label key={cat._id} className="flex items-center gap-2 bg-background border border-foreground/10 px-3 py-1.5 rounded-lg cursor-pointer hover:border-primary transition-all group">
+                        <input 
+                          type="checkbox" 
+                          checked={editingProduct.categories?.includes(cat._id) || false}
+                          onChange={(e) => {
+                            const current = editingProduct.categories || [];
+                            const updated = e.target.checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
+                            setEditingProduct({...editingProduct, categories: updated});
+                          }}
+                          className="accent-primary w-4 h-4"
+                        />
+                        <span className="text-[10px] font-black uppercase tracking-wider group-hover:text-primary">{cat.name}</span>
+                      </label>
+                    ))}
+                    {(!stats?.categories || stats.categories.length === 0) && (
+                      <p className="text-xs text-foreground/40 italic">No categories available. Please create one first.</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -636,6 +836,25 @@ export default function AdminDashboard() {
         </div>
       )}
 
+       {/* Category Modal */}
+      {showCategoryModal && editingCategory && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-background rounded-2xl w-full max-w-md">
+            <div className="flex justify-between items-center p-6 border-b border-foreground/10">
+              <h2 className="text-xl font-bold">{editingCategory._id ? 'Edit Category' : 'Add Category'}</h2>
+              <button onClick={() => setShowCategoryModal(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSaveCategory} className="p-6 flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-bold uppercase mb-1 block">Category Name</label>
+                <input required value={editingCategory.name} onChange={e => setEditingCategory({...editingCategory, name: e.target.value})} className="w-full border p-2 rounded uppercase font-bold" />
+              </div>
+              <button type="submit" className="bg-primary text-white font-bold py-3 rounded-xl hover:bg-primary-dark">Save Category</button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Campaign Modal */}
       {showCampaignModal && editingCampaign && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -664,9 +883,54 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-bold uppercase mb-2 block">Select Products</label>
-                <div className="max-h-48 overflow-y-auto border border-foreground/10 rounded p-2 flex flex-col gap-2">
-                  {products.map(p => (
+                <div className="flex justify-between items-end mb-2">
+                  <div className="flex-1">
+                    <label className="text-xs font-bold uppercase mb-1 block">Filter by Category</label>
+                    <select 
+                      value={campaignFilterCategory} 
+                      onChange={e => setCampaignFilterCategory(e.target.value)}
+                      className="border rounded px-2 py-1 text-sm w-full max-w-[200px] bg-background"
+                    >
+                      <option value="All">All Categories</option>
+                      {stats?.categories?.map(cat => (
+                        <option key={cat._id} value={cat.name}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const filteredIds = products
+                          .filter(p => campaignFilterCategory === 'All' || p.categories?.some(c => c.name === campaignFilterCategory))
+                          .map(p => p.id);
+                        const uniqueIds = Array.from(new Set([...editingCampaign.products, ...filteredIds]));
+                        setEditingCampaign({...editingCampaign, products: uniqueIds});
+                      }}
+                      className="text-xs font-bold text-blue-600 hover:underline"
+                    >
+                      Select All Filtered
+                    </button>
+                    <span className="text-foreground/20">|</span>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const filteredIds = products
+                          .filter(p => campaignFilterCategory === 'All' || p.categories?.some(c => c.name === campaignFilterCategory))
+                          .map(p => p.id);
+                        const remainingIds = editingCampaign.products.filter(id => !filteredIds.includes(id));
+                        setEditingCampaign({...editingCampaign, products: remainingIds});
+                      }}
+                      className="text-xs font-bold text-red-600 hover:underline"
+                    >
+                      Deselect All Filtered
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-48 overflow-y-auto border border-foreground/10 rounded p-2 flex flex-col gap-2 bg-accent/10">
+                  {products
+                    .filter(p => campaignFilterCategory === 'All' || p.categories?.some(c => c.name === campaignFilterCategory))
+                    .map(p => (
                     <label key={p.id} className="flex items-center gap-2 text-sm p-1 hover:bg-accent rounded cursor-pointer">
                       <input 
                         type="checkbox" 

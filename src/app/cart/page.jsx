@@ -59,7 +59,7 @@ export default function CartPage() {
 
   useEffect(() => {
     if (showConfirmModal && session) {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
       setLoadingAddresses(true);
       fetch(`${apiBase}/user/addresses`, {
         headers: { 'Authorization': `Bearer ${session.user.email}` },
@@ -89,7 +89,7 @@ export default function CartPage() {
     setLoading(true);
     const selectedAddr = addresses.find(a => a._id === selectedAddressId);
     
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
     
     try {
       const res = await fetch(`${apiBase}/payment/create_payment_url`, {

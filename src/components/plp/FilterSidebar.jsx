@@ -1,15 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Check } from 'lucide-react';
 
-const CATEGORIES = ['Sneaker', 'Running', 'Sandal', 'Slip-on'];
 const SIZES = ['36', '37', '38', '39', '40', '41', '42', '43', '44'];
-const COLORS = [
-  { name: 'Black', hex: '#000000' },
-  { name: 'White', hex: '#ffffff' },
-  { name: 'Red', hex: '#E3000F' },
-  { name: 'Grey', hex: '#808080' },
-];
+
+
 const PRICE_RANGES = [
   { label: 'Under 500,000đ', min: 0, max: 500000 },
   { label: '500,000đ - 1,000,000đ', min: 500000, max: 1000000 },
@@ -38,6 +33,32 @@ function FilterSection({ title, defaultOpen = true, children }) {
 }
 
 export default function FilterSidebar({ filters, updateFilter }) {
+  const [dynamicColors, setDynamicColors] = useState([]);
+  const [dynamicCategories, setDynamicCategories] = useState([]);
+
+  useEffect(() => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+    
+    const fetchColors = async () => {
+      try {
+        const res = await fetch(`${apiBase}/products/colors`);
+        const data = await res.json();
+        setDynamicColors(data);
+      } catch (err) { console.error('Failed to fetch colors', err); }
+    };
+
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(`${apiBase}/products/categories`);
+        const data = await res.json();
+        setDynamicCategories(data);
+      } catch (err) { console.error('Failed to fetch categories', err); }
+    };
+
+    fetchColors();
+    fetchCategories();
+  }, []);
+
   
   const handleCheckbox = (key, value) => {
     const current = filters[key] || [];
@@ -58,18 +79,23 @@ export default function FilterSidebar({ filters, updateFilter }) {
       
       <div className="flex flex-col">
         {/* Categories */}
-        <FilterSection title="Category">
-          {CATEGORIES.map(category => (
-            <label key={category} className="flex items-center gap-2 cursor-pointer group">
-              <input 
-                type="checkbox" 
-                checked={filters.category?.includes(category) || false}
-                onChange={() => handleCheckbox('category', category)}
-                className="w-4 h-4 rounded border-foreground/30 text-primary focus:ring-primary accent-primary"
-              />
-              <span className="text-sm group-hover:text-primary transition-colors">{category}</span>
-            </label>
-          ))}
+        <FilterSection title="Categories">
+          <div className="space-y-2">
+            {dynamicCategories.map(cat => (
+              <label key={cat} className="flex items-center gap-3 cursor-pointer group">
+                <div className="relative flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={filters.category?.includes(cat) || false}
+                    onChange={() => handleCheckbox('category', cat)}
+                    className="peer appearance-none w-5 h-5 border-2 border-foreground/10 rounded-md checked:bg-primary checked:border-primary transition-all"
+                  />
+                  <Check size={14} className="absolute left-0.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                </div>
+                <span className="text-sm font-medium text-foreground/70 group-hover:text-primary transition-colors uppercase">{cat}</span>
+              </label>
+            ))}
+          </div>
         </FilterSection>
 
         {/* Price */}
@@ -124,22 +150,23 @@ export default function FilterSidebar({ filters, updateFilter }) {
         {/* Color */}
         <FilterSection title="Color">
           <div className="flex flex-wrap gap-3">
-            {COLORS.map(color => {
-              const isSelected = filters.color?.includes(color.name);
+            {dynamicColors.map(hex => {
+              const isSelected = filters.color?.includes(hex);
               return (
                 <button
-                  key={color.name}
-                  title={color.name}
-                  onClick={() => handleCheckbox('color', color.name)}
+                  key={hex}
+                  title={hex}
+                  onClick={() => handleCheckbox('color', hex)}
                   className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
                     isSelected ? 'border-primary ring-2 ring-primary ring-offset-2' : 'border-foreground/10 hover:scale-110'
                   }`}
-                  style={{ backgroundColor: color.hex }}
+                  style={{ backgroundColor: hex }}
                 >
-                  {isSelected && <Check size={14} className={color.name === 'White' ? 'text-black' : 'text-white'} />}
+                  {isSelected && <Check size={14} className={hex.toLowerCase() === '#ffffff' ? 'text-black' : 'text-white'} />}
                 </button>
               )
             })}
+            {dynamicColors.length === 0 && <p className="text-xs text-foreground/40 italic">No colors found</p>}
           </div>
         </FilterSection>
       </div>

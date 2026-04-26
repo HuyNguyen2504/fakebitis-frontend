@@ -2,8 +2,8 @@
 
 import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
-import { ShoppingCart, User, LogOut, History, ShieldAlert, Search, MapPin } from "lucide-react";
-import { useContext, useState, useEffect } from "react";
+import { ShoppingCart, User, LogOut, History, ShieldAlert, Search, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { CartContext } from "../Providers";
 import { useRouter } from "next/navigation";
 
@@ -13,16 +13,36 @@ export default function Navbar() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState([]);
+  const scrollRef = useRef(null);
   
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   useEffect(() => {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-    fetch(`${apiBase}/products/categories`)
-      .then(res => res.json())
-      .then(data => setCategories(data))
-      .catch(err => console.error('Failed to fetch categories', err));
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+    const fetchCats = async () => {
+      try {
+        const res = await fetch(`${apiBase}/products/categories?t=${Date.now()}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (Array.isArray(data)) setCategories(data);
+      } catch (err) { console.error('Failed to fetch categories', err); }
+    };
+    fetchCats();
+    // Refresh when window regains focus or custom event is fired
+    window.addEventListener('focus', fetchCats);
+    window.addEventListener('categoriesUpdated', fetchCats);
+    return () => {
+      window.removeEventListener('focus', fetchCats);
+      window.removeEventListener('categoriesUpdated', fetchCats);
+    };
   }, []);
+
+  const scroll = (direction) => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left' ? scrollLeft - 200 : scrollLeft + 200;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -40,14 +60,35 @@ export default function Navbar() {
           Biti's
         </Link>
 
-        {/* Links */}
-        <div className="hidden lg:flex items-center gap-6 font-semibold text-sm uppercase tracking-wider">
-          {Array.isArray(categories) && categories.slice(0, 4).map(cat => (
-            <Link key={cat} href={`/products?category=${encodeURIComponent(cat)}`} className="hover:text-primary transition-colors">
-              {cat}
+        {/* Links / Category Slider */}
+        <div className="hidden lg:flex items-center gap-2 flex-1 max-w-xl relative px-8 group/nav">
+          <button 
+            onClick={() => scroll('left')}
+            className="absolute left-0 z-10 p-1 hover:text-primary opacity-0 group-hover/nav:opacity-100 transition-opacity bg-background/50 rounded-full"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          
+          <div 
+            ref={scrollRef}
+            className="flex items-center gap-6 font-semibold text-xs uppercase tracking-widest overflow-x-auto no-scrollbar scroll-smooth py-2"
+          >
+            {Array.isArray(categories) && categories.map(cat => (
+              <Link key={cat} href={`/products?category=${encodeURIComponent(cat)}`} className="hover:text-primary transition-colors whitespace-nowrap">
+                {cat}
+              </Link>
+            ))}
+            <Link href="/products" className="hover:text-primary transition-colors whitespace-nowrap font-black text-primary border-l border-foreground/10 pl-6">
+              All Collections
             </Link>
-          ))}
-          <Link href="/products" className="hover:text-primary transition-colors">All Collections</Link>
+          </div>
+
+          <button 
+            onClick={() => scroll('right')}
+            className="absolute right-0 z-10 p-1 hover:text-primary opacity-0 group-hover/nav:opacity-100 transition-opacity bg-background/50 rounded-full"
+          >
+            <ChevronRight size={20} />
+          </button>
         </div>
 
         {/* Search Bar */}

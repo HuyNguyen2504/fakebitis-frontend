@@ -52,7 +52,7 @@ export default function useProducts() {
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
         const queryParams = new URLSearchParams();
         queryParams.append('page', page);
         queryParams.append('limit', 12);
