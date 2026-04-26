@@ -544,18 +544,23 @@ export default function AdminDashboard() {
                   .filter(p => productFilterCategory === 'All' || p.categories?.some(c => c.name === productFilterCategory))
                   .map(p => (
                   <tr key={p.id} className="border-b border-foreground/10 hover:bg-accent/30 transition-colors">                     
-                    <td className="p-4 flex items-center gap-3">
-                      <img src={formatImageUrl(p.images[0])} alt={p.name} className="w-10 h-10 rounded object-cover bg-accent" />
-                      <span className="font-semibold">{p.name}</span>
+                    <td className="p-4 align-middle">
+                      <div className="flex items-center gap-3">
+                        <img src={formatImageUrl(p.images[0])} alt={p.name} className="w-10 h-10 rounded object-cover bg-accent" />
+                        <span className="font-semibold">{p.name}</span>
+                      </div>
                     </td>
-                    <td className="p-4 flex flex-wrap gap-1">
-                      {p.categories?.map(c => (
-                        <span key={c._id} className="text-[10px] bg-accent px-2 py-0.5 rounded-full font-bold uppercase">{c.name}</span>
-                      ))}
+                    <td className="p-4 align-middle">
+                      <div className="flex flex-wrap gap-1">
+                        {p.categories?.map(c => (
+                          <span key={c._id} className="text-[10px] bg-accent px-2 py-0.5 rounded-full font-bold uppercase">{c.name}</span>
+                        ))}
+                      </div>
                     </td>
-                    <td className="p-4 font-semibold text-primary">{formatCurrency(p.price)}</td>
-                    <td className="p-4">{p.sold}</td>
-                    <td className="p-4 flex justify-end gap-2">
+                    <td className="p-4 align-middle font-semibold text-primary">{formatCurrency(p.price)}</td>
+                    <td className="p-4 align-middle">{p.sold}</td>
+                    <td className="p-4 align-middle">
+                      <div className="flex justify-end gap-2">
                       <button 
                         onClick={() => { setEditingProduct({...p, _id: p.id, categories: p.categories?.map(c => c._id)}); setShowProductModal(true); }}
                         className="p-2 text-foreground/60 hover:text-primary bg-background border border-foreground/10 rounded"
