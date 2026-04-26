@@ -575,6 +575,7 @@ export default function AdminDashboard() {
                         }}
                         className="p-2 text-foreground/60 hover:text-red-500 bg-background border border-foreground/10 rounded"
                       ><Trash size={16} /></button>
+                      </div>
                     </td>
                   </tr>
                  ))}
