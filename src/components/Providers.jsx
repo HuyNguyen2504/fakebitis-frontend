@@ -54,6 +54,8 @@ export default function Providers({ children }) {
     ));
   };
 
+  const clearCart = () => setCartItems([]);
+
   return (
     <SessionProvider>
       <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateQuantity, clearCart, setCartItems }}>
