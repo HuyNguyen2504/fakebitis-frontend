@@ -19,12 +19,15 @@ export default function ProductActions({ product }) {
   const selectedVariant = availableSizes.find(v => v.size === selectedSize);
   const stock = selectedVariant ? selectedVariant.stock : null;
 
+  const [quantity, setQuantity] = useState(1);
+
   const handleAddToCart = () => {
     if (!selectedColor) return alert('Please select a color first');
     if (!selectedSize) return alert('Please select a size first');
     if (stock === 0) return alert('Out of stock');
+    if (quantity > stock) return alert(`Only ${stock} left in stock`);
     
-    addToCart(product, selectedSize, selectedColor);
+    addToCart(product, selectedSize, selectedColor, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -43,6 +46,7 @@ export default function ProductActions({ product }) {
               onClick={() => {
                 setSelectedColor(color);
                 setSelectedSize(null); // Reset size when color changes
+                setQuantity(1); // Reset quantity when color changes
               }}
               className={`w-10 h-10 rounded-full border-2 transition-all ${selectedColor === color ? 'border-primary ring-2 ring-primary ring-offset-2' : 'border-foreground/20 hover:border-primary/50'}`} 
               style={{ backgroundColor: color }}
@@ -62,7 +66,10 @@ export default function ProductActions({ product }) {
             <button
               key={size}
               disabled={variantStock === 0}
-              onClick={() => setSelectedSize(size)}
+              onClick={() => {
+                setSelectedSize(size);
+                setQuantity(1); // Reset quantity when size changes
+              }}
               className={`py-3 border-2 rounded-xl text-center font-bold transition-all ${
                 variantStock === 0 
                   ? 'bg-accent/50 border-transparent text-foreground/30 cursor-not-allowed'
@@ -84,12 +91,32 @@ export default function ProductActions({ product }) {
         )}
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col gap-4 mb-10">
+      {/* Quantity Selection & Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-10">
+        <div className="flex items-center justify-between border-2 border-foreground/20 rounded-xl h-14 px-2 sm:w-[150px]">
+          <button 
+            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+            className="w-10 h-10 flex items-center justify-center text-xl font-bold hover:bg-foreground/5 rounded-lg transition-colors"
+          >
+            -
+          </button>
+          <span className="font-bold text-lg">{quantity}</span>
+          <button 
+            onClick={() => {
+              if (stock !== null && quantity < stock) {
+                setQuantity(quantity + 1);
+              }
+            }}
+            className="w-10 h-10 flex items-center justify-center text-xl font-bold hover:bg-foreground/5 rounded-lg transition-colors"
+          >
+            +
+          </button>
+        </div>
+
         <button 
           onClick={handleAddToCart}
           disabled={!selectedColor || !selectedSize || stock === 0}
-          className="w-full bg-primary hover:bg-primary-dark text-white h-14 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 bg-primary hover:bg-primary-dark text-white h-14 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ShoppingBag /> {added ? 'Added!' : stock === 0 ? 'Out of Stock' : 'Add to Cart'}
         </button>

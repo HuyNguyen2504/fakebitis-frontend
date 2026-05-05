@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Trash2, ShoppingCart, ArrowRight, CheckSquare, Square, X } from 'lucide-react';
 
 export default function CartPage() {
-  const { cartItems, removeFromCart, clearCart, setCartItems } = useContext(CartContext);
+  const { cartItems, removeFromCart, updateQuantity, clearCart, setCartItems } = useContext(CartContext);
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [selectedItemKeys, setSelectedItemKeys] = useState(new Set());
@@ -167,7 +167,21 @@ export default function CartPage() {
                     <p className="font-semibold text-primary">
                       {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}
                     </p>
-                    <p className="text-sm font-medium">Qty: {item.quantity}</p>
+                    <div className="flex items-center gap-3 border border-foreground/20 rounded-lg px-2 py-1">
+                      <button 
+                        onClick={() => updateQuantity(item.product, item.size, item.color, item.quantity - 1)}
+                        className="w-6 h-6 flex items-center justify-center font-bold hover:bg-foreground/10 rounded transition-colors"
+                      >
+                        -
+                      </button>
+                      <span className="text-sm font-medium w-4 text-center">{item.quantity}</span>
+                      <button 
+                        onClick={() => updateQuantity(item.product, item.size, item.color, item.quantity + 1)}
+                        className="w-6 h-6 flex items-center justify-center font-bold hover:bg-foreground/10 rounded transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <button 

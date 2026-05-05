@@ -19,13 +19,13 @@ export default function Providers({ children }) {
     localStorage.setItem('bitis_cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addToCart = (product, size, color) => {
+  const addToCart = (product, size, color, quantityToAdd = 1) => {
     setCartItems(prev => {
       const existing = prev.find(item => item.product === product.id && item.size === size && item.color === color);
       if (existing) {
         return prev.map(item => 
           item.product === product.id && item.size === size && item.color === color
-            ? { ...item, quantity: item.quantity + 1 } 
+            ? { ...item, quantity: item.quantity + quantityToAdd } 
             : item
         );
       }
@@ -34,7 +34,7 @@ export default function Providers({ children }) {
         name: product.name,
         size: size,
         color: color,
-        quantity: 1,
+        quantity: quantityToAdd,
         price: product.discount_price || product.price,
         image: product.images[0]
       }];
@@ -45,11 +45,18 @@ export default function Providers({ children }) {
     setCartItems(prev => prev.filter(item => !(item.product === productId && item.size === size && item.color === color)));
   };
 
-  const clearCart = () => setCartItems([]);
+  const updateQuantity = (productId, size, color, newQuantity) => {
+    if (newQuantity < 1) return;
+    setCartItems(prev => prev.map(item => 
+      item.product === productId && item.size === size && item.color === color
+        ? { ...item, quantity: newQuantity }
+        : item
+    ));
+  };
 
   return (
     <SessionProvider>
-      <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, clearCart, setCartItems }}>
+      <CartContext.Provider value={{ cartItems, addToCart, removeFromCart, updateQuantity, clearCart, setCartItems }}>
         {children}
       </CartContext.Provider>
     </SessionProvider>
