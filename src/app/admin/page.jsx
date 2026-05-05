@@ -7,7 +7,7 @@ import { Activity, DollarSign, Package, ShieldAlert, Plus, Edit, Trash, Upload, 
 import Link from 'next/link';
 
 export default function AdminDashboard() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [stats, setStats] = useState(null);
   const [products, setProducts] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
@@ -769,6 +769,7 @@ export default function AdminDashboard() {
                                     const data = await res.json();
                                     alert(data.message);
                                   } else {
+                                    await update({ role: 'admin' });
                                     window.location.reload(); // Force reload to update session
                                   }
                                 }

@@ -44,7 +44,10 @@ export const authOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, account, user }) {
+    async jwt({ token, account, user, trigger, session }) {
+      if (trigger === "update" && session?.role) {
+        token.role = session.role;
+      }
       if (account && user) {
         if (account.provider === 'google') {
           try {
