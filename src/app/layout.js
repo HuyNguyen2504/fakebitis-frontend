@@ -3,6 +3,8 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/ui/Navbar";
 
+import Footer from "@/components/ui/Footer";
+
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -25,6 +27,7 @@ export default function RootLayout({ children }) {
           <main className="flex-1">
             {children}
           </main>
+          <Footer />
         </Providers>
       </body>
     </html>

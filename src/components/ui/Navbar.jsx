@@ -134,7 +134,7 @@ export default function Navbar() {
                     <p className="text-xs text-foreground/60 truncate">{session.user.email}</p>
                   </div>
                   
-                  {session.user.role === 'admin' && (
+                  {(session.user.role === 'admin' || session.user.role === 'superadmin') && (
                     <Link href="/admin" className="px-4 py-2 text-sm hover:bg-foreground/5 flex items-center gap-2">
                       <ShieldAlert size={16} className="text-primary" /> Admin Dashboard
                     </Link>
@@ -155,12 +155,12 @@ export default function Navbar() {
               </div>
             </div>
           ) : (
-            <button 
-              onClick={() => signIn('google')} 
+            <Link 
+              href="/login"
               className="text-sm font-semibold bg-foreground text-background px-4 py-2 rounded-lg hover:bg-foreground/80 transition-colors"
             >
               Sign In
-            </button>
+            </Link>
           )}
         </div>
       </div>

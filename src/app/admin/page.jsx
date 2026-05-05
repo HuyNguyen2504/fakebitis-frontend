@@ -11,8 +11,9 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [products, setProducts] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, products, sales
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, products, sales, roles
   const [activeDashboardView, setActiveDashboardView] = useState('revenue'); // revenue, orders, shoes_sold
   const [activeShoesSoldTab, setActiveShoesSoldTab] = useState('product'); // product, category
   
@@ -29,9 +30,9 @@ export default function AdminDashboard() {
   const [editingCategory, setEditingCategory] = useState(null);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.role === 'admin') {
+    if (status === 'authenticated' && (session?.user?.role === 'admin' || session?.user?.role === 'superadmin')) {
       fetchData();
-    } else if (status === 'unauthenticated' || (status === 'authenticated' && session?.user?.role !== 'admin')) {
+    } else if (status === 'unauthenticated' || (status === 'authenticated' && session?.user?.role !== 'admin' && session?.user?.role !== 'superadmin')) {
       setLoading(false);
     }
   }, [status, session]);
@@ -39,7 +40,7 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
-      const authHeader = { 'Authorization': `Bearer ${session.user.email}` };
+      const authHeader = { 'Authorization': `Bearer ${session.accessToken || session.user.email}` };
       const statsRes = await fetch(`${apiBase}/admin/stats`, { headers: authHeader, cache: 'no-store' });
       setStats(await statsRes.json());
       
@@ -50,6 +51,11 @@ export default function AdminDashboard() {
       const campRes = await fetch(`${apiBase}/admin/campaigns`, { headers: authHeader, cache: 'no-store' });
       setCampaigns(await campRes.json());
       
+      const userRes = await fetch(`${apiBase}/admin/users`, { headers: authHeader, cache: 'no-store' });
+      if (userRes.ok) {
+        setUsers(await userRes.json());
+      }
+
       setLoading(false);
     } catch (e) {
       console.error(e);
@@ -126,7 +132,7 @@ export default function AdminDashboard() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.user.email}`
+          'Authorization': `Bearer ${session.accessToken || session.user.email}`
         },
         body: JSON.stringify(payload)
       });
@@ -149,7 +155,7 @@ export default function AdminDashboard() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.user.email}`
+          'Authorization': `Bearer ${session.accessToken || session.user.email}`
         },
         body: JSON.stringify(editingCampaign)
       });
@@ -172,7 +178,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.user.email}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.accessToken || session.user.email}` },
         body: JSON.stringify(editingCategory)
       });
       if (!res.ok) throw new Error('Failed to save');
@@ -187,7 +193,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${apiBase}/admin/categories/${id}`, { 
         method: 'DELETE', 
-        headers: { 'Authorization': `Bearer ${session.user.email}` } 
+        headers: { 'Authorization': `Bearer ${session.accessToken || session.user.email}` } 
       });
       const data = await res.json();
       if (!res.ok) return alert(data.message);
@@ -197,7 +203,7 @@ export default function AdminDashboard() {
   };
 
   if (status === 'loading' || loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  if (!session || session.user.role !== 'admin') return <div className="p-12 text-center">Access Denied</div>;
+  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) return <div className="p-12 text-center">Access Denied</div>;
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-12">
@@ -214,12 +220,12 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b border-foreground/10 mb-8">
-        {['dashboard', 'products', 'sales'].map(tab => (
+      <div className="flex gap-4 border-b border-foreground/10 mb-8 overflow-x-auto no-scrollbar">
+        {['dashboard', 'products', 'sales', 'roles'].map(tab => (
           <button 
             key={tab} 
             onClick={() => setActiveTab(tab)}
-            className={`pb-4 px-4 font-bold uppercase tracking-wider text-sm ${activeTab === tab ? 'border-b-2 border-primary text-primary' : 'text-foreground/50 hover:text-foreground'}`}
+            className={`pb-4 px-4 font-bold uppercase tracking-wider text-sm whitespace-nowrap ${activeTab === tab ? 'border-b-2 border-primary text-primary' : 'text-foreground/50 hover:text-foreground'}`}
           >
             {tab}
           </button>
@@ -569,7 +575,7 @@ export default function AdminDashboard() {
                         onClick={async () => {
                           if (confirm('Delete this product?')) {
                             const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
-                            await fetch(`${apiBase}/admin/products/${p.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${session.user.email}` } });
+                            await fetch(`${apiBase}/admin/products/${p.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${session.accessToken || session.user.email}` } });
                             fetchData();
                           }
                         }}
@@ -657,7 +663,7 @@ export default function AdminDashboard() {
                     onClick={async () => {
                       if (confirm('Delete campaign?')) {
                         const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
-                        await fetch(`${apiBase}/admin/campaigns/${c._id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${session.user.email}` } });
+                        await fetch(`${apiBase}/admin/campaigns/${c._id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${session.accessToken || session.user.email}` } });
                         fetchData();
                       }
                     }}
@@ -672,6 +678,143 @@ export default function AdminDashboard() {
               </div>
             ))}
             {campaigns.length === 0 && <p className="text-foreground/50">No active campaigns.</p>}
+          </div>
+        </div>
+      )}
+
+      {/* Roles Tab */}
+      {activeTab === 'roles' && (
+        <div className="bg-background border border-foreground/10 rounded-2xl p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-bold">Role Management</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-accent/50 border-y border-foreground/10 text-foreground/70 uppercase">
+                <tr>
+                  <th className="p-4 font-semibold">Name</th>
+                  <th className="p-4 font-semibold">Email</th>
+                  <th className="p-4 font-semibold">Role</th>
+                  <th className="p-4 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(u => (
+                  <tr key={u._id} className="border-b border-foreground/10 hover:bg-accent/30 transition-colors">
+                    <td className="p-4 font-semibold">{u.name}</td>
+                    <td className="p-4 text-foreground/70">{u.email}</td>
+                    <td className="p-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        u.role === 'superadmin' ? 'bg-red-100 text-red-700' : 
+                        u.role === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        {/* Super Admin Actions */}
+                        {session.user.role === 'superadmin' && u.role === 'user' && (
+                          <button 
+                            onClick={async () => {
+                              const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+                              const res = await fetch(`${apiBase}/admin/users/${u._id}/role`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.accessToken || session.user.email}` },
+                                body: JSON.stringify({ role: 'admin' })
+                              });
+                              if (!res.ok) {
+                                const data = await res.json();
+                                alert(data.message);
+                              } else {
+                                fetchData();
+                              }
+                            }}
+                            className="bg-primary/10 text-primary hover:bg-primary hover:text-white px-3 py-1 rounded text-xs font-bold transition-colors"
+                          >
+                            Make Admin
+                          </button>
+                        )}
+                        {session.user.role === 'superadmin' && u.role === 'admin' && (
+                          <>
+                            <button 
+                              onClick={async () => {
+                                const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+                                const res = await fetch(`${apiBase}/admin/users/${u._id}/role`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.accessToken || session.user.email}` },
+                                  body: JSON.stringify({ role: 'user' })
+                                });
+                                if (!res.ok) {
+                                  const data = await res.json();
+                                  alert(data.message);
+                                } else {
+                                  fetchData();
+                                }
+                              }}
+                              className="bg-red-50 text-red-600 hover:bg-red-500 hover:text-white px-3 py-1 rounded text-xs font-bold transition-colors"
+                            >
+                              Remove Admin
+                            </button>
+                            <button 
+                              onClick={async () => {
+                                if (confirm('Are you sure you want to transfer Super Admin rights? You will be demoted to a regular Admin.')) {
+                                  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+                                  const res = await fetch(`${apiBase}/admin/users/${u._id}/role`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.accessToken || session.user.email}` },
+                                    body: JSON.stringify({ role: 'superadmin' })
+                                  });
+                                  if (!res.ok) {
+                                    const data = await res.json();
+                                    alert(data.message);
+                                  } else {
+                                    window.location.reload(); // Force reload to update session
+                                  }
+                                }
+                              }}
+                              className="bg-orange-100 text-orange-700 hover:bg-orange-500 hover:text-white px-3 py-1 rounded text-xs font-bold transition-colors"
+                            >
+                              Transfer SuperAdmin
+                            </button>
+                          </>
+                        )}
+
+                        {/* Normal Admin Actions */}
+                        {session.user.role === 'admin' && u._id === session.user.id && (
+                          <button 
+                            onClick={async () => {
+                              if (confirm('Are you sure you want to remove your admin rights? You will be redirected to the home page.')) {
+                                const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+                                const res = await fetch(`${apiBase}/admin/users/${u._id}/role`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.accessToken || session.user.email}` },
+                                  body: JSON.stringify({ role: 'user' })
+                                });
+                                if (!res.ok) {
+                                  const data = await res.json();
+                                  alert(data.message);
+                                } else {
+                                  window.location.href = '/';
+                                }
+                              }
+                            }}
+                            className="bg-red-50 text-red-600 hover:bg-red-500 hover:text-white px-3 py-1 rounded text-xs font-bold transition-colors"
+                          >
+                            Remove My Admin
+                          </button>
+                        )}
+                        
+                        {/* Empty placeholder for aesthetic alignment if no actions */}
+                        {(u.role === 'superadmin' || (session.user.role === 'admin' && u._id !== session.user.id)) && (
+                          <span className="text-xs text-foreground/40 italic">No actions available</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
